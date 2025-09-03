@@ -1,5 +1,94 @@
 <script>
 // ========================================
+// MODO DEMO PARA GITHUB PAGES
+// ========================================
+
+const IS_DEMO_MODE = window.location.hostname.includes('github.io') || 
+                     window.location.protocol === 'file:' ||
+                     !window.location.hostname.includes('localhost');
+
+// Override da classe de conexão para modo demo
+if (IS_DEMO_MODE) {
+    console.log('🎮 Modo Demo Ativado - Simulando conexões...');
+    
+    // Substitui a classe de conexão real
+    window.EnhancedArenaConnection = class DemoConnection {
+        constructor(url, server, type, dataManager) {
+            this.url = url;
+            this.server = server;
+            this.type = type;
+            this.dataManager = dataManager;
+            this.topplayers = [];
+            this.isConnected = true;
+            
+            // Simula conexão bem-sucedida
+            setTimeout(() => {
+                updateServerStatus(this.server.name, this.type, 'connected');
+                this.startSimulation();
+            }, Math.random() * 2000);
+        }
+        
+        startSimulation() {
+            // Gera dados fake de jogadores com tags do clã
+            const names = [
+                'ЙЖ* Shadow', 'ЙЖ* Viper', 'ЙЖ* Phoenix', 'ЙЖ* Dragon', 'ЙЖ* Wolf',
+                'ЙЖ$ Thunder', 'ЙЖ$ Storm', 'ЙЖ Snake', 'ЙЖ Master', 'ЙEЖЦ$ Elite',
+                'Player123', 'NoobMaster', 'ProGamer', 'ЙЖ* Ninja', 'ЙЖ* Samurai',
+                'ЙЖ* King', 'ЙЖ* Queen', 'RandomPlayer', 'ЙЖ$ Beast', 'ЙЖ$ Monster'
+            ];
+            
+            // Atualiza a cada 3 segundos
+            setInterval(() => {
+                this.topplayers = [];
+                
+                // Gera top 10 aleatório
+                for (let i = 0; i < 10; i++) {
+                    const randomName = names[Math.floor(Math.random() * names.length)];
+                    const player = {
+                        place: i + 1,
+                        name: randomName + (Math.random() > 0.7 ? ' 👑' : ''),
+                        mass: Math.floor(Math.random() * 500000) + 50000 - (i * 40000),
+                        crowns: Math.floor(Math.random() * 10),
+                        skin: Math.floor(Math.random() * 50),
+                        flags: 0,
+                        accountId: Math.floor(Math.random() * 90000000) + 10000000,
+                        id: Math.floor(Math.random() * 9000) + 1000
+                    };
+                    
+                    this.topplayers.push(player);
+                    
+                    // Processa apenas membros do clã
+                    this.dataManager.addOrUpdateMember(player, this.server.name, this.type);
+                }
+            }, 3000 + Math.random() * 2000);
+        }
+        
+        getTop10() {
+            return this.topplayers;
+        }
+    };
+    
+    // Mostra aviso de modo demo
+    setTimeout(() => {
+        showNotification('🎮 Modo Demonstração Ativo - Dados Simulados', 'info');
+    }, 3000);
+}
+
+// Adiciona também um fallback para o loading
+setTimeout(() => {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+        loadingScreen.classList.add('hidden');
+        
+        if (IS_DEMO_MODE) {
+            showNotification('✅ Sistema carregado em modo demonstração', 'success');
+        }
+    }
+}, 5000);
+
+// Resto do código original continua aqui...
+</script>
+// ========================================
 // NEXUS CLAN MONITORING SYSTEM v2.0
 // Professional WebSocket Integration
 // ========================================
