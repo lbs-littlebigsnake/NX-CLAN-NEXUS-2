@@ -1121,4 +1121,556 @@ onclick="sortTable('name')">Nickname</th>
         <source src="data:audio/wav;base64,UklGRl4GAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YToGAAB/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg" type="audio/wav">
     </audio>
 </body>
+<script>
+"use strict";
+
+// Configuration
+const CONFIG = {
+    CLAN_TAGS: ['ЙЖ*', 'ЙЖ', 'ЙЖ$', 'ЙEЖЦ$'],
+    UPDATE_INTERVAL: 3000,
+    SIMULATION_SPEED: 5000,
+    MAX_MEMBERS: 50,
+    DEMO_MODE: true
+};
+
+// Demo Data Generator
+class DemoDataGenerator {
+    constructor() {
+        this.firstNames = [
+            'Shadow', 'Viper', 'Phoenix', 'Dragon', 'Wolf', 'Thunder', 'Storm',
+            'Snake', 'Master', 'Elite', 'Ninja', 'Samurai', 'King', 'Queen',
+            'Beast', 'Monster', 'Warrior', 'Legend', 'Ghost', 'Phantom', 'Reaper',
+            'Hunter', 'Killer', 'Destroyer', 'Champion', 'Hero', 'Titan', 'God',
+            'Devil', 'Angel', 'Demon', 'Spirit', 'Soul', 'Knight', 'Wizard'
+        ];
+        
+        this.servers = [
+            { name: 'São Paulo', region: 'BR' },
+            { name: 'Santiago', region: 'CL' },
+            { name: 'Miami', region: 'US' },
+            { name: 'New York', region: 'US' },
+            { name: 'Dallas', region: 'US' }
+        ];
+        
+        this.members = new Map();
+        this.initializeMembers();
+    }
+
+    initializeMembers() {
+        for (let i = 0; i < 30; i++) {
+            const member = this.generateMember();
+            this.members.set(member.accountId, member);
+        }
+    }
+
+    generateMember() {
+        const tag = CONFIG.CLAN_TAGS[Math.floor(Math.random() * CONFIG.CLAN_TAGS.length)];
+        const name = this.firstNames[Math.floor(Math.random() * this.firstNames.length)];
+        const server = this.servers[Math.floor(Math.random() * this.servers.length)];
+        const isOnline = Math.random() > 0.3;
+        
+        return {
+            accountId: Math.floor(Math.random() * 90000000) + 10000000,
+            name: `${tag} ${name}`,
+            tag: tag,
+            currentScore: Math.floor(Math.random() * 500000) + 10000,
+            bestScore: Math.floor(Math.random() * 1000000) + 50000,
+            totalScore: Math.floor(Math.random() * 10000000) + 100000,
+            gamesPlayed: Math.floor(Math.random() * 500) + 10,
+            totalPlayTime: Math.floor(Math.random() * 100) * 3600000,
+            status: isOnline ? 'online' : 'offline',
+            lastSeen: isOnline ? new Date() : new Date(Date.now() - Math.random() * 7200000),
+            server: `${server.name} - ${Math.random() > 0.5 ? 'PC' : 'Mobile'}`,
+            joinDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
+            level: Math.floor(Math.random() * 100) + 1,
+            activity: this.generateActivityData()
+        };
+    }
+
+    generateActivityData() {
+        const data = [];
+        for (let i = 0; i < 24; i++) {
+            data.push(Math.floor(Math.random() * 10));
+        }
+        return data;
+    }
+
+    updateMember(member) {
+        if (member.status === 'online') {
+            member.currentScore += Math.floor(Math.random() * 10000) - 3000;
+            member.currentScore = Math.max(0, member.currentScore);
+            
+            if (Math.random() > 0.9) {
+                member.gamesPlayed++;
+                member.totalScore += member.currentScore;
+                member.bestScore = Math.max(member.bestScore, member.currentScore);
+                member.currentScore = Math.floor(Math.random() * 50000) + 10000;
+            }
+            
+            member.lastSeen = new Date();
+            
+            if (Math.random() > 0.95) {
+                member.status = 'offline';
+            }
+        } else {
+            if (Math.random() > 0.98) {
+                member.status = 'online';
+                member.currentScore = Math.floor(Math.random() * 50000) + 10000;
+                member.server = this.servers[Math.floor(Math.random() * this.servers.length)].name + 
+                               ' - ' + (Math.random() > 0.5 ? 'PC' : 'Mobile');
+            }
+        }
+        
+        return member;
+    }
+
+    simulateNewMember() {
+        if (this.members.size < CONFIG.MAX_MEMBERS && Math.random() > 0.95) {
+            const newMember = this.generateMember();
+            this.members.set(newMember.accountId, newMember);
+            showNotification(`Novo membro detectado: ${newMember.name}`, 'success');
+            return newMember;
+        }
+        return null;
+    }
+
+    getMembers() {
+        return Array.from(this.members.values());
+    }
+
+    getOnlineCount() {
+        return Array.from(this.members.values()).filter(m => m.status === 'online').length;
+    }
+
+    getTotalGames() {
+        return Array.from(this.members.values()).reduce((sum, m) => sum + m.gamesPlayed, 0);
+    }
+
+    getTotalScore() {
+        return Array.from(this.members.values()).reduce((sum, m) => sum + m.totalScore, 0);
+    }
+}
+
+// UI Manager
+class UIManager {
+    constructor(dataGenerator) {
+        this.dataGenerator = dataGenerator;
+        this.currentTab = 'members';
+        this.currentTimeFilter = 'all';
+        this.currentSort = { field: 'status', direction: 'desc' };
+        this.searchQuery = '';
+        this.charts = {};
+        
+        this.initializeUI();
+    }
+
+    initializeUI() {
+        this.updateServerStatus();
+        
+        setInterval(() => {
+            this.updateData();
+            this.updateCurrentView();
+        }, CONFIG.UPDATE_INTERVAL);
+        
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            showNotification('Sistema NEXUS carregado com sucesso!', 'success');
+        }, 3000);
+    }
+
+    updateServerStatus() {
+        const container = document.getElementById('connectionStatus');
+        const servers = ['São Paulo', 'Santiago', 'Miami', 'New York', 'Dallas'];
+        
+        servers.forEach(server => {
+            ['PC', 'Mobile'].forEach(type => {
+                const status = document.createElement('div');
+                status.className = 'server-status';
+                status.innerHTML = `
+                    <span class="status-dot connected"></span>
+                    <span>${server} ${type}</span>
+                `;
+                container.appendChild(status);
+            });
+        });
+    }
+
+    updateData() {
+        this.dataGenerator.members.forEach(member => {
+            this.dataGenerator.updateMember(member);
+        });
+        
+        this.dataGenerator.simulateNewMember();
+        this.updateStats();
+    }
+
+    updateStats() {
+        const stats = {
+            totalMembers: this.dataGenerator.members.size,
+            onlineMembers: this.dataGenerator.getOnlineCount(),
+            totalGames: this.dataGenerator.getTotalGames(),
+            totalScore: this.dataGenerator.getTotalScore()
+        };
+        
+        animateNumber('totalMembers', stats.totalMembers);
+        animateNumber('onlineMembers', stats.onlineMembers);
+        animateNumber('totalGames', stats.totalGames);
+        animateNumber('totalScore', formatNumber(stats.totalScore));
+    }
+
+    updateCurrentView() {
+        switch(this.currentTab) {
+            case 'members':
+                this.updateMembersTable();
+                break;
+            case 'activity':
+                this.updateActivityTable();
+                break;
+            case 'scores':
+                this.updateScoresTable();
+                break;
+            case 'rankings':
+                this.updateRankings();
+                break;
+            case 'analytics':
+                this.updateAnalytics();
+                break;
+        }
+    }
+
+    updateMembersTable() {
+        const tbody = document.getElementById('membersTableBody');
+        if (!tbody) return;
+        
+        let members = this.dataGenerator.getMembers();
+        
+        if (this.searchQuery) {
+            members = members.filter(m => 
+                m.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                m.accountId.toString().includes(this.searchQuery)
+            );
+        }
+        
+        if (this.currentTimeFilter !== 'all') {
+            const cutoff = this.getTimeCutoff(this.currentTimeFilter);
+            members = members.filter(m => m.lastSeen > cutoff);
+        }
+        
+        members.sort((a, b) => {
+            if (a.status !== b.status) {
+                return a.status === 'online' ? -1 : 1;
+            }
+            
+            let aVal = a[this.currentSort.field];
+            let bVal = b[this.currentSort.field];
+            
+            if (this.currentSort.direction === 'asc') {
+                return aVal > bVal ? 1 : -1;
+            } else {
+                return aVal < bVal ? 1 : -1;
+            }
+        });
+        
+        tbody.innerHTML = '';
+        members.forEach(member => {
+            const row = document.createElement('tr');
+            row.onclick = () => this.openProfile(member);
+            
+            row.innerHTML = `
+                <td>
+                    <div class="member-name">
+                        <span class="member-tag">${member.tag}</span>
+                        <span>${member.name.replace(member.tag, '').trim()}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="member-id">#${member.accountId}</span>
+                </td>
+                <td>
+                    <span class="status-badge ${member.status}">
+                        ${member.status === 'online' ? 'Online' : 'Offline'}
+                    </span>
+                </td>
+                <td class="animated-number">${formatNumber(member.currentScore)}</td>
+                <td>${member.server}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+    <script>
+    updateActivityTable() {
+        const container = document.getElementById('membersSection');
+        
+        if (!document.getElementById('activitySection')) {
+            const section = document.createElement('div');
+            section.className = 'content-section';
+            section.id = 'activitySection';
+            section.innerHTML = `
+                <div class="members-table-container">
+                    <div class="table-header">
+                        <h3>⚡ Atividade dos Membros</h3>
+                    </div>
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('name')">Nickname</th>
+                                <th onclick="sortTable('gamesPlayed')">Partidas</th>
+                                <th onclick="sortTable('totalPlayTime')">Tempo Jogado</th>
+                                <th onclick="sortTable('avgTime')">Tempo Médio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityTableBody"></tbody>
+                    </table>
+                </div>
+            `;
+            container.parentElement.appendChild(section);
+        }
+        
+        const tbody = document.getElementById('activityTableBody');
+        if (!tbody) return;
+        
+        let members = this.dataGenerator.getMembers();
+        members.sort((a, b) => b.totalPlayTime - a.totalPlayTime);
+        
+        tbody.innerHTML = '';
+        members.slice(0, 20).forEach(member => {
+            const row = document.createElement('tr');
+            const avgTime = member.totalPlayTime / (member.gamesPlayed || 1);
+            
+            row.innerHTML = `
+                <td>
+                    <div class="member-name">
+                        <span class="member-tag">${member.tag}</span>
+                        <span>${member.name.replace(member.tag, '').trim()}</span>
+                    </div>
+                </td>
+                <td class="animated-number">${member.gamesPlayed}</td>
+                <td class="animated-number">${formatDuration(member.totalPlayTime)}</td>
+                <td>${formatDuration(avgTime)}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    updateScoresTable() {
+        const container = document.getElementById('membersSection');
+        
+        if (!document.getElementById('scoresSection')) {
+            const section = document.createElement('div');
+            section.className = 'content-section';
+            section.id = 'scoresSection';
+            section.innerHTML = `
+                <div class="members-table-container">
+                    <div class="table-header">
+                        <h3>🏆 Ranking de Pontuações</h3>
+                    </div>
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('name')">Nickname</th>
+                                <th onclick="sortTable('bestScore')">Melhor Score</th>
+                                <th onclick="sortTable('totalScore')">Score Total</th>
+                                <th onclick="sortTable('avgScore')">Média</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoresTableBody"></tbody>
+                    </table>
+                </div>
+            `;
+            container.parentElement.appendChild(section);
+        }
+        
+        const tbody = document.getElementById('scoresTableBody');
+        if (!tbody) return;
+        
+        let members = this.dataGenerator.getMembers();
+        members.sort((a, b) => b.totalScore - a.totalScore);
+        
+        tbody.innerHTML = '';
+        members.slice(0, 20).forEach(member => {
+            const row = document.createElement('tr');
+            const avgScore = Math.floor(member.totalScore / (member.gamesPlayed || 1));
+            
+            row.innerHTML = `
+                <td>
+                    <div class="member-name">
+                        <span class="member-tag">${member.tag}</span>
+                        <span>${member.name.replace(member.tag, '').trim()}</span>
+                    </div>
+                </td>
+                <td class="animated-number">${formatNumber(member.bestScore)}</td>
+                <td class="animated-number">${formatNumber(member.totalScore)}</td>
+                <td class="animated-number">${formatNumber(avgScore)}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    updateRankings() {
+        // Rankings implementation (simplified for space)
+    }
+
+    updateAnalytics() {
+        // Analytics implementation (simplified for space)
+    }
+
+    getTimeCutoff(filter) {
+        const now = new Date();
+        switch(filter) {
+            case '24h': return new Date(now - 24 * 60 * 60 * 1000);
+            case '7d': return new Date(now - 7 * 24 * 60 * 60 * 1000);
+            case '30d': return new Date(now - 30 * 24 * 60 * 60 * 1000);
+            default: return new Date(0);
+        }
+    }
+
+    openProfile(member) {
+        showNotification(`Perfil de ${member.name}`, 'info');
+    }
+}
+
+// Utility Functions
+function formatNumber(num) {
+    if (num >= 1e12) return (num / 1e12).toFixed(1) + 'T';
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function formatDuration(ms) {
+    const hours = Math.floor(ms / 3600000);
+    const minutes = Math.floor((ms % 3600000) / 60000);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+}
+
+function animateNumber(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const current = parseInt(element.textContent.replace(/[^\d]/g, '')) || 0;
+    const diff = value - current;
+    const duration = 500;
+    const steps = 20;
+    const stepValue = diff / steps;
+    const stepDuration = duration / steps;
+    
+    let step = 0;
+    const interval = setInterval(() => {
+        step++;
+        if (step >= steps) {
+            element.textContent = value;
+            element.classList.add('updating');
+            setTimeout(() => element.classList.remove('updating'), 300);
+            clearInterval(interval);
+        } else {
+            element.textContent = Math.floor(current + stepValue * step);
+        }
+    }, stepDuration);
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? 'rgba(0, 255, 136, 0.9)' : 
+                     type === 'error' ? 'rgba(255, 51, 102, 0.9)' : 
+                     'rgba(0, 255, 255, 0.9)'};
+        color: #000;
+        border-radius: 10px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => document.body.removeChild(notification), 300);
+    }, 3000);
+}
+
+// Global Functions
+let dataGenerator;
+let uiManager;
+
+function switchTab(tabName, element) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    const sectionId = tabName + 'Section';
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.add('active');
+    }
+    
+    uiManager.currentTab = tabName;
+    uiManager.updateCurrentView();
+}
+
+function changeTimeFilter(filter, element) {
+    document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    
+    uiManager.currentTimeFilter = filter;
+    uiManager.updateCurrentView();
+}
+
+function sortTable(field) {
+    if (uiManager.currentSort.field === field) {
+        uiManager.currentSort.direction = 
+            uiManager.currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        uiManager.currentSort.field = field;
+        uiManager.currentSort.direction = 'desc';
+    }
+    
+    uiManager.updateCurrentView();
+}
+
+function searchMembers(query) {
+    uiManager.searchQuery = query;
+    uiManager.updateCurrentView();
+}
+
+// Add slide animations
+const animationStyles = document.createElement('style');
+animationStyles.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(animationStyles);
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🐍 NEXUS System Starting...');
+    dataGenerator = new DemoDataGenerator();
+    uiManager = new UIManager(dataGenerator);
+    console.log('✅ System Ready - Demo Mode Active');
+});
+            </script>
 </html
