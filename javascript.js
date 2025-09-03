@@ -86,8 +86,6 @@ setTimeout(() => {
     }
 }, 5000);
 
-// Resto do código original continua aqui...
-</script>
 // ========================================
 // NEXUS CLAN MONITORING SYSTEM v2.0
 // Professional WebSocket Integration
