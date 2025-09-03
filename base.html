@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS [ЙЖ*] - Sistema de Monitoramento Avançado</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --nexus-primary: #00ff88;
+            --nexus-secondary: #ff00ff;
+            --nexus-accent: #00ffff;
+            --nexus-dark: #0a0a0f;
+            --nexus-darker: #050508;
+            --nexus-light: #ffffff;
+            --nexus-danger: #ff3366;
+            --nexus-warning: #ffaa00;
+            --nexus-success: #00ff88;
+            --nexus-glass: rgba(15, 15, 25, 0.95);
+            --nexus-glass-light: rgba(255, 255, 255, 0.08);
+            --snake-gradient: linear-gradient(135deg, #00ff88, #00ffff, #ff00ff);
+            --neon-glow: 0 0 20px rgba(0, 255, 136, 0.5);
+            --online-color: #00ff88;
+            --offline-color: #666;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: var(--nexus-darker);
+            color: var(--nexus-light);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .nexus-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 30%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                var(--nexus-darker);
+            overflow: hidden;
+        }
+
+        .nexus-bg::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(90deg, 
+                    transparent, 
+                    transparent 2px, 
+                    rgba(0, 255, 136, 0.03) 2px, 
+                    rgba(0, 255, 136, 0.03) 4px);
+            animation: nexusGrid 20s linear infinite;
+        }
+
+        @keyframes nexusGrid {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100px); }
+        }
+
+        .floating-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            animation: floatOrb 20s infinite ease-in-out;
+        }
+
+        .floating-orb:nth-child(2) {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.4) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            animation-duration: 25s;
+        }
+
+        .floating-orb:nth-child(3) {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 0, 255, 0.3) 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            animation-duration: 30s;
+            animation-delay: 5s;
+        }
+
+        .floating-orb:nth-child(4) {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.3) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation-duration: 35s;
+            animation-delay: 10s;
+        }
+
+        @keyframes floatOrb {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -100px) scale(1.1); }
+            50% { transform: translate(-100px, 100px) scale(0.9); }
+            75% { transform: translate(50px, 50px) scale(1.05); }
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            background: var(--nexus-darker);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .snake-loader {
+            width: 150px;
+            height: 150px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .snake-loader::before {
+            content: '🐍';
+            font-size: 80px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: snakeRotate 2s infinite linear;
+        }
+
+        @keyframes snakeRotate {
+            0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+            50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.2); }
+            100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+        }
+
+        .loading-text {
+            font-size: 24px;
+            font-weight: bold;
+            background: var(--snake-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Main Container */
+        .nexus-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .nexus-header {
+            background: var(--nexus-glass);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--nexus-primary);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            animation: slideDown 0.5s ease;
+        }
+
+        .nexus-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .clan-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--snake-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            animation: logoPulse 3s infinite;
+            box-shadow: var(--neon-glow);
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); box-shadow: var(--neon-glow); }
+            50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(0, 255, 136, 0.8); }
+        }
+
+        .header-text h1 {
+            font-size: 48px;
+            font-weight: 900;
+            background: var(--snake-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .header-text p {
+            font-size: 18px;
+            color: var(--nexus-accent);
+            letter-spacing: 2px;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .server-status {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 10px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .server-status:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: statusPulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--online-color);
+            box-shadow: 0 0 10px var(--online-color);
+        }
+
+        .status-dot.disconnected {
+            background: var(--nexus-danger);
+            box-shadow: 0 0 10px var(--nexus-danger);
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Stats Overview */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--nexus-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--nexus-primary);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--nexus-primary);
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Tab Navigation */
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 12px 25px;
+            background: transparent;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 10px;
+            color: var(--nexus-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: var(--nexus-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .tab-btn:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .tab-btn:hover {
+            color: var(--nexus-dark);
+            z-index: 1;
+        }
+
+        .tab-btn.active {
+            background: var(--snake-gradient);
+            color: var(--nexus-dark);
+            border-color: transparent;
+            animation: tabActivate 0.3s ease;
+        }
+
+        @keyframes tabActivate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Time Filter */
+        .time-filter {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .time-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 25px;
+            color: var(--nexus-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .time-btn:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .time-btn.active {
+            background: var(--nexus-primary);
+            color: var(--nexus-dark);
+            border-color: var(--nexus-primary);
+            font-weight: bold;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Members Table */
+        .members-table-container {
+            background: var(--nexus-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        .members-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .members-table thead th {
+            background: rgba(0, 255, 136, 0.1);
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            color: var(--nexus-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .members-table thead th:hover {
+            background: rgba(0, 255, 136, 0.2);
+        }
+
+        .members-table thead th::after {
+            content: '⇅';
+            position: absolute;
+            right: 10px;
+            opacity: 0.5;
+        }
+
+        .members-table tbody tr {
+            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .members-table tbody tr:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateX(5px);
+        }
+
+        .members-table tbody td {
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .members-table tbody tr td:first-child {
+            border-left: 3px solid var(--nexus-primary);
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+
+        .members-table tbody tr td:last-child {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .member-name {
+            font-weight: bold;
+            color: var(--nexus-accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .member-tag {
+            background: var(--snake-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+        }
+
+        .member-id {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: statusUpdate 0.3s ease;
+        }
+
+        @keyframes statusUpdate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .status-badge.online {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--online-color);
+            border: 1px solid var(--online-color);
+        }
+
+        .status-badge.offline {
+            background: rgba(102, 102, 102, 0.2);
+            color: var(--offline-color);
+            border: 1px solid var(--offline-color);
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Player Profile Modal */
+        .profile-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 5000;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        .profile-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .profile-content {
+            background: var(--nexus-glass);
+            backdrop-filter: blur(30px);
+            border: 2px solid var(--nexus-primary);
+            border-radius: 25px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalSlideUp 0.3s ease;
+        }
+
+        @keyframes modalSlideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .profile-header {
+            background: var(--snake-gradient);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        .profile-info {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .profile-name {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--nexus-dark);
+            margin-bottom: 5px;
+        }
+
+        .profile-id {
+            font-size: 18px;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .profile-status {
+            font-size: 24px;
+        }
+
+        .close-profile {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 30px;
+            color: var(--nexus-dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .close-profile:hover {
+            transform: rotate(90deg);
+            color: var(--nexus-danger);
+        }
+
+        .profile-body {
+            padding: 30px;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .profile-stat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .profile-stat:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateY(-3px);
+        }
+
+        .profile-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--nexus-primary);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .profile-stat-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+
+        /* Charts Container */
+        .chart-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--nexus-primary);
+        }
+
+        /* Profile Navigation */
+        .profile-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .profile-nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid var(--nexus-primary);
+            color: var(--nexus-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 20px;
+        }
+
+        .profile-nav-btn:hover {
+            background: var(--nexus-primary);
+            color: var(--nexus-dark);
+            transform: scale(1.1);
+        }
+        .profile-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--nexus-glass);
+            border: 2px solid var(--nexus-primary);
+            border-radius: 10px;
+            color: var(--nexus-light);
+            font-weight: bold;
+            z-index: 10000;
+            animation: notificationSlide 0.3s ease;
+            backdrop-filter: blur(20px);
+        }
+
+        @keyframes notificationSlide {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        .notification.success {
+            border-color: var(--nexus-success);
+            background: rgba(0, 255, 136, 0.2);
+        }
+
+        .notification.error {
+            border-color: var(--nexus-danger);
+            background: rgba(255, 51, 102, 0.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-overview {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-text h1 {
+                font-size: 32px;
+            }
+
+            .connection-status {
+                justify-content: center;
+            }
+
+            .tab-navigation {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .tab-navigation {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .members-table {
+                font-size: 14px;
+            }
+
+            .profile-content {
+                width: 95%;
+            }
+        }
+
+        /* Sound Toggle Button */
+        .sound-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--nexus-glass);
+            border: 2px solid var(--nexus-primary);
+            color: var(--nexus-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 24px;
+            backdrop-filter: blur(20px);
+        }
+
+        .sound-toggle:hover {
+            transform: scale(1.1);
+            background: var(--nexus-primary);
+            color: var(--nexus-dark);
+        }
+
+        .sound-toggle.muted {
+            border-color: var(--nexus-danger);
+            color: var(--nexus-danger);
+        }
+
+        /* Number Animation */
+        .animated-number {
+            display: inline-block;
+            transition: all 0.5s ease;
+        }
+
+        .animated-number.updating {
+            animation: numberPop 0.5s ease;
+        }
+
+        @keyframes numberPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: var(--nexus-primary); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="nexus-bg">
+        <div class="floating-orb"></div>
+        <div class="floating-orb"></div>
+        <div class="floating-orb"></div>
+        <div class="floating-orb"></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="snake-loader"></div>
+        <div class="loading-text">Conectando aos servidores...</div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="nexus-container">
+        <!-- Header -->
+        <div class="nexus-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <div class="clan-logo">🐍</div>
+                    <div class="header-text">
+                        <h1>NEXUS [ЙЖ*]</h1>
+                        <p>Sistema de Monitoramento Avançado</p>
+                    </div>
+                </div>
+                <div class="connection-status" id="connectionStatus">
+                    <!-- Server status will be dynamically added -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value animated-number" id="totalMembers">0</div>
+                <div class="stat-label">Membros Detectados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-value animated-number" id="onlineMembers">0</div>
+                <div class="stat-label">Membros Online</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎮</div>
+                <div class="stat-value animated-number" id="totalGames">0</div>
+                <div class="stat-label">Partidas Totais</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value animated-number" id="totalScore">0</div>
+                <div class="stat-label">Pontuação Total</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('members')">
+                👥 Lista de Membros
+            </button>
+            <button class="tab-btn" onclick="switchTab('activity')">
+                ⚡ Membros Ativos
+            </button>
+            <button class="tab-btn" onclick="switchTab('scores')">
+                🏆 Pontuações
+            </button>
+            <button class="tab-btn" onclick="switchTab('competitions')">
+                🎯 Competições
+            </button>
+            <button class="tab-btn" onclick="switchTab('dashboard')">
+                📊 Dashboard
+            </button>
+        </div>
+
+        <!-- Time Filter -->
+        <div class="time-filter" id="timeFilter">
+            <button class="time-btn" onclick="changeTimeFilter('24h')">24 Horas</button>
+            <button class="time-btn" onclick="changeTimeFilter('7d')">7 Dias</button>
+            <button class="time-btn" onclick="changeTimeFilter('30d')">30 Dias</button>
+            <button class="time-btn active" onclick="changeTimeFilter('all')">Todo Período</button>
+        </div>
+
+        <!-- Content Sections -->
+        <div id="contentArea">
+            <!-- Members List Section -->
+            <div class="content-section active" id="membersSection">
+                <div class="members-table-container">
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('name')">Nickname</th>
+                                <th onclick="sortTable('id')">ID</th>
+                                <th onclick="sortTable('status')">Status</th>
+                                <th onclick="sortTable('lastSeen')">Última Vez Visto</th>
+                                <th onclick="sortTable('server')">Servidor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTableBody">
+                            <!-- Members will be dynamically added -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Activity Section -->
+            <div class="content-section" id="activitySection">
+                <div class="members-table-container">
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th 
+onclick="sortTable('name')">Nickname</th>
+                                <th onclick="sortTable('games')">Partidas</th>
+                                <th onclick="sortTable('time')">Tempo Jogado</th>
+                                <th onclick="sortTable('avgTime')">Tempo Médio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityTableBody">
+                            <!-- Activity data will be dynamically added -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Scores Section -->
+            <div class="content-section" id="scoresSection">
+                <div class="members-table-container">
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('name')">Nickname</th>
+                                <th onclick="sortTable('best')">Melhor Pontuação</th>
+                                <th onclick="sortTable('total')">Pontuação Total</th>
+                                <th onclick="sortTable('avg')">Média</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoresTableBody">
+                            <!-- Scores will be dynamically added -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Profile Modal -->
+    <div class="profile-modal" id="profileModal">
+        <div class="profile-content">
+            <span class="close-profile" onclick="closeProfile()">&times;</span>
+            <div class="profile-header">
+                <div class="profile-info">
+                    <div>
+                        <div class="profile-name" id="profileName">--</div>
+                        <div class="profile-id" id="profileId">#--</div>
+                    </div>
+                    <div class="profile-status" id="profileStatus">--</div>
+                </div>
+            </div>
+            <div class="profile-body">
+                <div class="profile-stats" id="profileStats">
+                    <!-- Stats will be dynamically added -->
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title" id="chartTitle">Atividade nas Últimas 24 Horas</div>
+                    <canvas id="activityChart"></canvas>
+                </div>
+                <div class="profile-nav">
+                    <button class="profile-nav-btn" onclick="changeProfilePeriod('prev')">←</button>
+                    <button class="profile-nav-btn" onclick="changeProfilePeriod('next')">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Toggle -->
+    <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">
+        🔊
+    </button>
+
+    <!-- Audio Elements -->
+    <audio id="clickSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSl+zPDaizsIGGS36+2hVBELTKXh8bllHAU2jdXy0H0vBSF1xe/glEILElyx6OyrWBUIQ5zd8sFuIAUoe8vw3Yg9ChRhsuvu" type="audio/wav">
+    </audio>
+    <audio id="notificationSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRl4GAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YToGAAB/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4N/g3+Df4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg" type="audio/wav">
+    </audio>
+</body>
+</html
